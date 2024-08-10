@@ -2,8 +2,6 @@ import os
 import base64
 from langchain_openai import ChatOpenAI
 from langchain_core.output_parsers import StrOutputParser
-from langchain_core.prompts import PromptTemplate
-from langchain.chains import RetrievalQA
 
 
 def format_data_for_openai(diffs, readme_content, commit_messages):
@@ -36,38 +34,21 @@ def format_data_for_openai(diffs, readme_content, commit_messages):
     return prompt
 
 
-def call_openai(prompt, retriever):
-    client = ChatOpenAI(api_key=os.getenv("OPENAI_API_KEY"), temperature=0)
+def call_openai(prompt):
+    client = ChatOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
     try:
+        messages = [
+            {
+                "role": "system",
+                "content": "You are an AI trained to help with updating README files based on code changes.",
+            },
+            {"role": "user", "content": prompt},
+        ]
 
-        rag_prompt = PromptTemplate.from_template(
-            "Use the following pieces of context to update the README. If the context "
-            "doesn't provide relevant information, use your general knowledge.\n\n"
-            "Context: {context}\n\n"
-            "Human: {question}\n\n"
-            "AI: "
-        )
-
-        qa_chain = RetrievalQA.from_chain_type(
-            llm=client,
-            retriever=retriever,
-            chain_type="stuff",
-            return_source_documents=True,
-            chain_type_kwargs={"prompt": rag_prompt},
-        )
-
-        qa_chain = RetrievalQA.from_chain_type(
-            llm=client,
-            retriever=retriever,
-            chain_type="stuff",
-            return_source_documents=True,
-            chain_type_kwargs={"prompt": rag_prompt},
-        )
-
-        # Call RAG to generate the updated README content
-        result = qa_chain({"question": prompt})
+        # Call OpenAI
+        response = client.invoke(input=messages)
         parser = StrOutputParser()
-        content = parser.invoke(input=result)
+        content = parser.invoke(input=response)
 
         return content
     except Exception as e:
