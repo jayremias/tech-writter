@@ -1,12 +1,54 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
+import useDebounce from './hooks/useDebounce'; // Assuming you saved the hook in useDebounce.js
 
 function App() {
   const [loading, setLoading] = useState(false);
   const [response, setResponse] = useState('');
   const [error, setError] = useState('');
   const [repoUrl, setRepoUrl] = useState('');
-  const [prNumber, setPrNumber] = useState(1);
+  const [prNumber, setPrNumber] = useState('');
+  const [repoSuggestions, setRepoSuggestions] = useState([]);
+  const [prSuggestions, setPrSuggestions] = useState([]);
+
+  const debouncedRepoUrl = useDebounce(repoUrl, 300);
+  const debouncedPrNumber = useDebounce(prNumber, 300);
+
+  const searchRepos = useCallback(async (query) => {
+    if (query.length < 3) return;
+    try {
+      const response = await axios.get(`http://localhost:8000/search-repos?q=${query}`);
+      setRepoSuggestions(response.data);
+    } catch (error) {
+      console.error('Error fetching repo suggestions:', error);
+    }
+  }, []);
+
+  const fetchPRs = useCallback(async (repo) => {
+    try {
+      const response = await axios.get(`http://localhost:8000/list-prs?repo=${repo}`);
+      setPrSuggestions(response.data);
+    } catch (error) {
+      console.error('Error fetching PR suggestions:', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (debouncedRepoUrl) {
+      searchRepos(debouncedRepoUrl);
+    } else {
+      setRepoSuggestions([]);
+    }
+  }, [debouncedRepoUrl, searchRepos]);
+
+  useEffect(() => {
+    const [owner, repo] = debouncedRepoUrl.split('/');
+    if (owner && repo) {
+      fetchPRs(`${owner}/${repo}`);
+    } else {
+      setPrSuggestions([]);
+    }
+  }, [debouncedRepoUrl, fetchPRs]);
 
   const handleGenerate = async () => {
     setLoading(true);
@@ -15,7 +57,7 @@ function App() {
     try {
       const result = await axios.post('http://localhost:8000/generate', { 
         repo_url: repoUrl, 
-        pr_number: prNumber 
+        pr_number: parseInt(prNumber) 
       });
       setResponse(result.data.response);
     } catch (error) {
@@ -46,26 +88,37 @@ function App() {
                     placeholder="Repository URL" 
                     value={repoUrl}
                     onChange={(e) => setRepoUrl(e.target.value)}
+                    list="repo-suggestions"
                   />
                   <label htmlFor="repo-url" className="absolute left-0 -top-3.5 text-gray-600 text-sm peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-440 peer-placeholder-shown:top-2 transition-all peer-focus:-top-3.5 peer-focus:text-gray-600 peer-focus:text-sm">Repository URL</label>
+                  <datalist id="repo-suggestions">
+                    {repoSuggestions.map((suggestion, index) => (
+                      <option key={index} value={suggestion} />
+                    ))}
+                  </datalist>
                 </div>
                 <div className="relative">
                   <input 
                     id="pr-number" 
                     name="pr-number" 
-                    type="number" 
+                    type="text" 
                     className="peer placeholder-transparent h-10 w-full border-b-2 border-gray-300 text-gray-900 focus:outline-none focus:border-rose-600" 
                     placeholder="PR Number" 
                     value={prNumber}
-                    onChange={(e) => setPrNumber(parseInt(e.target.value))}
-                    min="1"
+                    onChange={(e) => setPrNumber(e.target.value)}
+                    list="pr-suggestions"
                   />
                   <label htmlFor="pr-number" className="absolute left-0 -top-3.5 text-gray-600 text-sm peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-440 peer-placeholder-shown:top-2 transition-all peer-focus:-top-3.5 peer-focus:text-gray-600 peer-focus:text-sm">PR Number</label>
+                  <datalist id="pr-suggestions">
+                    {prSuggestions.map((suggestion, index) => (
+                      <option key={index} value={suggestion} />
+                    ))}
+                  </datalist>
                 </div>
                 <div className="relative">
                   <button 
                     onClick={handleGenerate}
-                    disabled={!repoUrl || loading}
+                    disabled={!repoUrl || !prNumber || loading}
                     className="bg-blue-500 text-white rounded-md px-4 py-2 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-opacity-50 disabled:opacity-50"
                   >
                     {loading ? 'Generating...' : 'Generate Updated README'}
