@@ -1,0 +1,7 @@
+{
+    "scripts": {
+        "dev": "concurrently \"pnpm:dev:*\"",
+        "dev:frontend": "cd frontend && pnpm dev",
+        "dev:backend": "cd backend && source .venv/bin/activate && fastapi dev main.py"
+    },
+    "devDependencies":{"concurrently":"^8.2.2"}}

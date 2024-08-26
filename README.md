@@ -1,23 +1,51 @@
-# AI for Developer Productivity: Technical Writer Agent
+# README.md
 
-## Overview
-In this project, we developed a **Technical Writer Agent** to enhance developer productivity. The core functionality of our agent leverages Retrieval-Augmented Generation (RAG) to dynamically update and refine technical documentation. This innovative approach not only streamlines the documentation process but also ensures that it remains accurate, up-to-date, and contextually relevant.
+This repository contains a backend service built with FastAPI. The service is designed to interact with GitHub repositories and pull requests.
 
-## Now It's Your Turn!
-Embrace your creativity and personalize this project to craft a solution that uniquely addresses the challenges and inefficiencies you face in your own environment. After seeing what our Technical Writer Agent can do, it’s time for you to take the reins. Use the foundation we’ve built and apply it to a challenge you face in your own professional or personal environment. Here’s how you can get started:
+## Features
 
-### Minimum Requirements
-1. **RAG Integration:** Successfully integrate Retrieval-Augmented Generation (RAG) to enable your agent to access and utilize external information when generating responses.
-2. **Vector Database Implementation:** Create and implement a vector data store capable of embedding and retrieving documents, ensuring that the system can access necessary information efficiently.
+- Fetch README content from a GitHub repository
+- Fetch pull request details by number
+- Get the diffs of the pull request
+- Get the commit messages associated with the pull request
+- Format data for OpenAI prompt
+- Call OpenAI to generate the updated README content
+- Create a pull request for the updated README
 
-### Stretch Goals
-1. **Enhanced UI/UX:** Develop a more advanced and user-friendly interface that includes features such as real-time suggestions, auto-completion of content, and a more interactive documentation process.
-2. **Automated Content Updates:** Implement a feature where the agent periodically checks and updates existing documentation based on new information or changes in the relevant field, ensuring that all documentation remains current without manual intervention.
-3. **Integration with Existing Tools:** Develop integrations for the agent with commonly used development tools and platforms (e.g., Confluence, Jira, Notion) to streamline workflows and increase accessibility.
-4. **Add The Features You Want**: Let your creativity shine by adding a unique feature that significantly simplifies or enhances your daily routines. Innovate with functionalities that solve problems and improve efficiency or satisfaction in meaningful ways.
+## New Changes
 
-## Privacy and Submission Guidelines
-- **Submission Requirements:** Please submit a link to your public repo with your implementation or a loom video showcasing your work on the [BloomTech AI Platform](app.bloomtech.com). 
-- **Sensitive Information:** If your implementation involves sensitive information, you are not required to submit a public repository. Instead, a detailed review of your project through a Loom video is acceptable, where you can demonstrate the functionality and discuss the technologies used without exposing confidential data.
+- Added a new file `backend/generate.py` which contains functions to fetch file content from a repository, get relevant files from a pull request, and generate a response based on the pull request details.
+- Added a new file `backend/main.py` which sets up a FastAPI application and defines endpoints for generating responses based on pull request details, searching repositories, and listing pull requests.
+- Updated `.gitignore` to ignore `.venv`, `__pycache__`, and `node_modules`.
+- Added a new file `backend/requirements.txt` which lists all the Python dependencies required for the backend service.
+- Updated `backend/utility.py` to include a function for formatting data for the OpenAI prompt and a function to call the OpenAI API.
 
----
+## Setup
+
+To set up the backend service, you need to install the Python dependencies listed in `backend/requirements.txt`. You can do this by running the following command:
+
+```bash
+cd backend
+pip install -r backend/requirements.txt
+```
+To set up the frontend service, you need to install dependencies listed in `package.json`. You can do this by running the following command:
+
+```bash
+cd fronend
+pnpm install
+```
+
+You also need to set up environment variables for the GitHub token (`GITHUB_TOKEN`) and the OpenAI API key (`OPENAI_API_KEY`).
+
+## Usage
+
+To start the application, navigate to the `root` directory and run the following commands:
+
+```bash
+pnpm install
+pnpm run dev
+```
+
+## Contributing
+
+If you want to contribute to this project, please create a new branch and submit a pull request with your changes. Your pull request will be reviewed and merged if it is approved.

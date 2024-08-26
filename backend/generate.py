@@ -1,38 +1,54 @@
 import os
-from unittest import TestLoader
-from webbrowser import Chrome
+import base64
+from typing import Dict, List
 from github import Github
 from langchain_openai import OpenAIEmbeddings
+from langchain_community.document_loaders import TextLoader
 from langchain_text_splitters import CharacterTextSplitter
-from utility import *
+from langchain_community.vectorstores import Chroma
+from .utility import format_data_for_openai, call_openai, update_readme_and_create_pr
 from dotenv import load_dotenv
+
 
 load_dotenv()
 
 
+def get_file_content(repo, file_path):
+    try:
+        content = repo.get_contents(file_path)
+        if isinstance(content, list):
+            return "Directory: " + ", ".join([f.path for f in content])
+        return base64.b64decode(content.content).decode("utf-8")
+    except Exception as e:
+        return f"Error fetching file content: {str(e)}"
+
+
 def create_vector_db(repo):
-    # Fetch all .py files from the repository
+    # Fetch all files from the repository
     contents = repo.get_contents("")
-    py_files = []
+    files = []
     while contents:
         file_content = contents.pop(0)
         if file_content.type == "dir":
             contents.extend(repo.get_contents(file_content.path))
-        elif file_content.name.endswith(".py"):
-            py_files.append(file_content)
+        else:
+            files.append(file_content)
 
     # Create a temporary directory to store the files
-    temp_dir = "temp_repo_files"
+    temp_dir = "../temp_repo_files"
     os.makedirs(temp_dir, exist_ok=True)
 
     # Save the content of each file
-    for file in py_files:
-        with open(os.path.join(temp_dir, file.name), "w") as f:
-            f.write(file.decoded_content.decode())
-
-    # Load the documents
-    loader = TestLoader(os.path.join(temp_dir, py_files[0].name))
-    documents = loader.load()
+    documents = []
+    for file in files:
+        file_path = os.path.join(temp_dir, file.path)
+        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+        content = get_file_content(repo, file.path)
+        with open(file_path, "w", encoding="utf-8") as f:
+            f.write(content)
+        if not content.startswith("Error fetching file content:"):
+            loader = TextLoader(file_path)
+            documents.extend(loader.load())
 
     # Split the documents into chunks
     text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=0)
@@ -40,26 +56,25 @@ def create_vector_db(repo):
 
     # Create the vector store
     embeddings = OpenAIEmbeddings()
-    db = Chrome.from_documents(texts, embeddings)
+    db = Chroma.from_documents(texts, embeddings)
 
     # Clean up temporary files
-    for file in os.listdir(temp_dir):
-        os.remove(os.path.join(temp_dir, file))
+    for root, dirs, files in os.walk(temp_dir, topdown=False):
+        for file in files:
+            os.remove(os.path.join(root, file))
+        for dir in dirs:
+            os.rmdir(os.path.join(root, dir))
     os.rmdir(temp_dir)
 
     return db
 
 
-def main():
+def generate_response(repo_url: str, pr_number: int):
     # Initialize GitHub API with token
     g = Github(os.getenv("GITHUB_TOKEN"))
 
-    # Get the repo path and PR number from the environment variables
-    repo_path = os.getenv("REPO_PATH")
-    pull_request_number = int(os.getenv("PR_NUMBER"))
-
     # Get the repo object
-    repo = g.get_repo(repo_path)
+    repo = g.get_repo(repo_url)
 
     # Create vector database for the repository
     vector_db = create_vector_db(repo)
@@ -68,7 +83,7 @@ def main():
     readme_content = repo.get_contents("README.md")
 
     # Fetch pull request by number
-    pull_request = repo.get_pull(pull_request_number)
+    pull_request = repo.get_pull(pr_number)
 
     # Get the diffs of the pull request
     pull_request_diffs = [
@@ -89,8 +104,6 @@ def main():
     updated_readme = call_openai(prompt, retriever)
 
     # Create PR for Updated PR
-    update_readme_and_create_pr(repo, updated_readme, readme_content.sha)
-
-
-if __name__ == "__main__":
-    main()
+    # update_readme_and_create_pr(repo, updated_readme, readme_content.sha)
+    print(updated_readme)
+    return updated_readme
