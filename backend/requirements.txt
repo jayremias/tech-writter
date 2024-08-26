@@ -28,5 +28,6 @@ wrapt
 langchain
 langchain_openai
 langchain_community
+chromadb
 fastapi[standard]
 httpx

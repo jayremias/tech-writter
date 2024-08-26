@@ -12,7 +12,6 @@ function App() {
   const [prSuggestions, setPrSuggestions] = useState([]);
 
   const debouncedRepoUrl = useDebounce(repoUrl, 300);
-  const debouncedPrNumber = useDebounce(prNumber, 300);
 
   const searchRepos = useCallback(async (query) => {
     if (query.length < 3) return;
