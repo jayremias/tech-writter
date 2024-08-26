@@ -5,7 +5,7 @@ from langchain_openai import ChatOpenAI
 from langchain_core.output_parsers import StrOutputParser
 
 
-def format_data_for_openai(diffs, readme_content, commit_messages):
+def format_data_for_openai(diffs, readme_content, commit_messages, relevant_files):
     prompt = None
 
     # Combine the changes into a string with clear delineation.
@@ -19,16 +19,32 @@ def format_data_for_openai(diffs, readme_content, commit_messages):
     # Decode the README content
     readme_content = base64.b64decode(readme_content.content).decode("utf-8")
 
+    # Format relevant file contents
+    relevant_file_contents = "\n\n".join(
+        [
+            f"File: {file['filename']}\nContent:\n{file['content']}"
+            for file in relevant_files
+        ]
+    )
+
     # Construct the prompt with clear instructions for the LLM.
     prompt = (
-        "Please review the following code changes and commit messages from a GitHub pull request:\n"
-        "Code changes from Pull Request:\n"
-        f"{changes}\n"
-        "Commit messages:\n"
-        f"{commit_messages}"
-        "Here is the current README file content:\n"
-        f"{readme_content}\n"
-        "Consider the code changes from the Pull Request (including changes in docstrings and other metadata), and the commit messages. Determine if the README needs to be updated. If so, edit the README, ensuring to maintain its existing style and clarity.\n"
+        "Please review the following information from a GitHub pull request:\n\n"
+        "1. Code changes:\n"
+        f"{changes}\n\n"
+        "2. Commit messages:\n"
+        f"{commit_messages}\n"
+        "3. Current README file content:\n"
+        f"{readme_content}\n\n"
+        "4. Relevant file contents:\n"
+        f"{relevant_file_contents}\n\n"
+        "Based on the code changes, commit messages, and the contents of relevant files, "
+        "determine if the README needs to be updated. If so, edit the README, ensuring to:\n"
+        "- Maintain its existing style and clarity\n"
+        "- Reflect new features, changes in functionality, or important updates\n"
+        "- Update any outdated information\n"
+        "- Add or modify sections as necessary to accurately represent the current state of the project\n\n"
+        "If no update is needed, return the original README content.\n\n"
         "Updated README:\n"
     )
 
